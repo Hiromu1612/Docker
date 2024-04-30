@@ -1,0 +1,8 @@
+{
+    "cSpell.words": [
+        "HEALTHCHECK",
+        "ONBUILD",
+        "STOPSIGNAL",
+        "WORKDIR"
+    ]
+}
