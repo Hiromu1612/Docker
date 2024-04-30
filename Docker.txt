@@ -143,6 +143,7 @@
     docker  container    run       -d      test --mode=1
           上位コマンド 副コマンド オプション 対象 引数
 
+<<<<<<< HEAD
 docker run = docker pull, create, start : イメージのダウンロード・コンテナの作成・起動
 
 docker stop → docker rm : 停止していないコンテナの場合、エラーが出て削除できない
@@ -347,5 +348,3 @@ docker cp コンテナ名：コンテナ側のパス ホスト側のパス (コ�
         Linux -- RedHat系(RedHat, CentOS)           yum install httpd
               -- Debian系(Debian, Ubuntu, Fedora)   apt install apache2
               -- Alpine
-
-・
