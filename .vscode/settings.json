@@ -1,8 +1,12 @@
 {
     "cSpell.words": [
+        "apiserver",
         "HEALTHCHECK",
+        "myrootpass",
         "ONBUILD",
+        "sheduler",
         "STOPSIGNAL",
+        "wordpresspass",
         "WORKDIR"
     ]
 }

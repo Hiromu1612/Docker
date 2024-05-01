@@ -350,6 +350,7 @@ docker cp コンテナ名：コンテナ側のパス ホスト側のパス (コ�
               -- Alpine
 
 
+
 ・Docker Hubへの登録
     ・イメージをどこに置くのか
         「docker run」は自動的にDocker Hubからイメージをダウンロードしている
@@ -384,6 +385,10 @@ docker cp コンテナ名：コンテナ側のパス ホスト側のパス (コ�
 
 ・Docker Compose：構築に関わるコマンド文の内容を１つのテキストファイル(定義ファイル)に書き込んで、一気に実行(up)・停止・削除(down)できるもの
                   YML形式(YAML Ain't a Markup Language):プログラムやソフトのデータを箇条書きで書くtxtファイル jsonファイルの上位互換
+                  Docker Compose, Kubernetesでは、コンテナの集合体を「Service」と呼ぶ
+                  同じ構成のコンテナを複数作るには、upコマンドに--scaleオプションをつける。Kubernetesの方が便利なのでscaleはあまり使わない
+                    docker compose -f フォルダパス up --scale penguin=3
+                    で、「フォルダ名_penguin_1,2,3」と3つのコンテナが起動する
                   定義ファイルは、コンテナ・ネットワーク・ボリュームなどの設定項目をコマンド文のように記述する。似てはいるがコマンド文ではない。
 
                   「up」コマンドはdocker runに似ていて定義ファイルの内容に従って、イメージのダウンロード・コンテナの作成起動などを行う
@@ -391,6 +396,11 @@ docker cp コンテナ名：コンテナ側のパス ホスト側のパス (コ�
                                     ボリューム・イメージはそのまま
                    「stop」コマンドはコンテナ・ネットワークを停止する
                                     ボリューム・イメージはそのまま
+
+                docker compose -f 定義ファイルのパス up オプション(-dなど)
+                                                    down
+                                                    stop
+                詳しいオプション項目はP.222参照
                     
     ・Dockerfileとの違い：テキストファイルに定義を書いて実行する点は同じだが、実行内容が違う
         Dockerfile    ：イメージを作る
@@ -399,7 +409,129 @@ docker cp コンテナ名：コンテナ側のパス ホスト側のパス (コ�
     ・Docker Composeを使うには：以前はソフトウェアをインストールする必要があったが、Docker Compose V2が発表され、Dockerコマンドとして使えるようになった
                               土台となるPC上にフォルダを作りそこに定義ファイル(YML形式)を置く
                               複数の定義ファイルを使いたいときは、その分だけDocker Compose用のフォルダも必要
-                              定義ファイルの名前は必ず「docker-compose.yml」。引数を指定すると変更可能
+                              定義ファイルの名前は必ず「docker-compose.yml」。引数(-f)を指定すると変更可能
                               定義ファイル・Docker ComposeはOS上だが、Docker Engine(Dockerコマンド)でコンテナに命令する = 人が手打ちでDocker Engineに命令していたのを、Docker Composeが代理で打ち込んでいるイメージ
     
-    ・
+    ・定義ファイル(Composeファイル)の書き方
+        大項目 → 名前 → 設定 の順で書く
+          例：Services → コンテナ名・ネットワーク名・ボリューム名 → 設定変更
+        半角スペース1,2,3個でもよいが、タブは禁止。YML形式はスペースに意味がある言語。
+        1度「半角スペース1個」で下げたら、それ以降の行はそれが基準になる
+        名前の後ろの：(コロン)の後は半角スペースが1個必要
+        #     :コメントアウト
+        "",'' :文字列
+
+        version: "3"
+        services:
+          コンテナ名1:
+            image: イメージ名
+            networks: 
+              - ネットワーク名
+            volumes:
+              ボリューム名1:
+              ボリューム名2:
+
+・よく使う大項目
+    services : コンテナに関する定義をする
+    networks : ネットワークに関する定義をする
+    volumes  : ボリュームに関する定義をする
+
+・よく使う設定  docker runとの対応
+    image    :なし
+    networks : --netと同じ
+    volumes  : -v, --mount
+    ports    : -p
+    environment: -e
+    depends_on : なし。別のサービスに依存することを示す。 wordpressコンテナ内でdepends_on : -mysqlと書かれていれば、mysqlコンテナ作成後にwordpressコンテナが作られる
+    restart    : なし。コンテナが停止したときの再試行ポリシーを設定する
+                 no            : 何もしない
+                 always        : 必ず再起動する
+                 on-failure    : プロセスが0以外のステータスで終了したときは再起動する
+                 unless-stopped: 停止していた時は再起動しない。それ以外は再起動する
+
+
+
+・MySQLコンテナとWordPressコンテナを定義ファイル(docker-compose.yml)で作る
+    まず、大項目と名前を書く
+    version: "3"
+    services:
+      mysql000ex11:
+      wordpress000ex12:
+    networks:
+      wordpress000net1:
+    volumes:
+      mysql000vol11:
+      wordpress000vol12:
+
+    その後、設定を書く
+    services:
+      mysql000ex11:
+        image: mysql:5.7
+      networks:
+        - mysql000net1
+      volumes:
+        - mysql000vol11:/var/lib/mysql
+      restart: always
+      environment:
+        MYSQL_ROOT_PASSWORD: myrootpass
+        MYSQL_DATABASE: wordpress000db
+        MYSQL_USER: wordpress000kun
+        MYSQL_PASSWORD: wordpresspass
+
+      wordpress000ex12:
+        同様に書く
+
+
+
+
+
+
+・Kubernetes：コンテナのオーケストレーションツールであり、Dockerとは別のソフトウェア
+              オーケストレーションツールとは、システム全体の統括をし、複数のコンテナを管理できるもの(オーケストラの指揮者)
+              ここでいう「複数」とは、全く同じ構成のコンテナ(＝サーバー)が複数ということで、大規模なシステムを管理する機会は少ない
+              k8sというスラングもある。k,sの間に8文字ある
+
+・Kubernetesは複数の物理マシン(仮想マシンでも可)に、複数のコンテナがあることが前提
+    例えば、20個のコンテナを20回dockerコマンドする 
+    → Docker Composeを使うにしても、物理マシンが多いと順番に接続して面倒 
+    → マニフェストファイル(定義ファイル)を作れば管理が楽
+
+・Kubernetesは「マスタ―ノード」というコントロールをするノードと、「ワーカーノード」という実際に動かすノードで構成される
+  ノードは物理的なマシンと同じものと考えてよい
+  パソコンから操作するのは、マスタ―ノードの初期設定・調整だけで、ワーカーノードを直接管理することはない(マスターが定義ファイルに基づきワーカーに命令)
+
+  クラスター：マスタ―ノード＋ワーカーノードで構成されたKubernetesシステムの一群のこと
+      マスタ―ノード：コンテナは動かさず、ワーカーノード上のコンテナを管理するだけ
+      ワーカーノード：コンテナを動かす実際のサーバー部分。Docker Engineなどのコンテナエンジンをインストールしておく必要がある。
+
+・Kubernetesを使うには
+    ・Kubernetesのソフトウェア
+    ・CNI(仮想ネットワークのドライバ, Container Networking Interface)のインストール
+        CNIとして代表的なソフトウェア → flannel, Calico, AWS VPC CNO
+
+    ・etcdというデータベース(マスタ―ノードでコンテナの状態管理に使う)
+    ・kubectl(マスタ―ノードの初期設定・調整で使う、クーベコントロール)
+    ・Docker Engine(ワーカーノードでコンテナを動かすのに使う)
+
+・コントロールプレーン(制御盤)：マスタ―ノードはコントロールプレーンで、ワーカーノードを管理する
+                               以下の5つのコンポーネント(部品)で構成される
+                               etcd以外はKubernetesに入っているので、etcdとKubernetesをインストールすればよい
+  マスタ―ノード側の構成
+    kube-apiserver           : 外部とやり取りをするプロセス。kubectlからの命令を受け取って実行する
+    kube-controller-manager  : コントローラーを統括管理・実行する
+    kube-scheduler           : Podをワーカーノードへと割り当てる
+    cloud-controller-manager : クラウドサービスと連携して、サービスを作る
+    etcd                     : クラスター情報を全管理するデータベース
+
+  ワーカーノード側の構成
+    kube-proxy               : ネットワーク通信をルーティングする仕組み
+    kube-let                 : マスタ―ノード側のkube-schedulerと連携して、ワーカーノード上にPodを配置し実行する。
+                               また、実行中のPodの状態を定期的に監視し、kube-schedulerへ通知する
+
+・KubernetesとDocker Composeの違い
+    Kubernetes：「コンテナを〇個、ボリュームを〇個で構成する」というように、あるべき姿をYAML形式のファイルで定義し、その通りに自動でコンテナを作ったり削除して「維持」
+                定義ファイル(マニフェスト)がデータベース(etcd)として管理され、コマンドで書き換えれる
+                一方で、コマンドで直接コンテナを調整すると、手元の定義ファイルとetcdで情報が異なる場合があるので注意
+    Docker Compose：オプションの指定でコンテナの数は変えられるが、作成時にしか関与せず、監視していないため「作って終わり」
+
+
